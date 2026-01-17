@@ -23,16 +23,39 @@ export default {
   	}
 
 	if (url.pathname === "/submit-feedback" && request.method === "POST") {
-		const body = await request.json();
-		// Body should contain { source, message }
-		// Not storing data yet
-		return new Response(
+		let body;
+		try {
+			body = await request.json();
+		} catch {
+			return new Response(
+				JSON.stringify({ error: "Invalid JSON body" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } }
+			);
+		}
+
+		const { source, message } = body;
+
+		if (!source || !message) {
+			return new Response(
+				JSON.stringify({ error: "Missing source or message" }),
+				{ status: 400, headers: { "Content-Type": "application/json" } }
+			);
+		}
+
+		await env.feedback_db
+			.prepare(
+				"INSERT INTO feedback (source, message, created_at) VALUES (?, ?, ?)"
+			)
+			.bind(source, message, new Date().toISOString())
+			.run();
+
+  		return new Response(
 			JSON.stringify({ success: true }),
 			{ headers: { "Content-Type": "application/json" } }
 		);
 	}
 
-  	return new Response("Feedback Aggregator API", { status: 200 });
+	return new Response("Feedback Aggregator API", { status: 200 });
 
-	},
+},
 } satisfies ExportedHandler<Env>;
