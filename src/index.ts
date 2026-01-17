@@ -13,6 +13,26 @@
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
+		const url = new URL(request.url);
+
+  	if (url.pathname === "/health") {
+		return new Response(
+			JSON.stringify({ status: "ok" }),
+      		{ headers: { "Content-Type": "application/json" } }
+    	);
+  	}
+
+	if (url.pathname === "/submit-feedback" && request.method === "POST") {
+		const body = await request.json();
+		// Body should contain { source, message }
+		// Not storing data yet
+		return new Response(
+			JSON.stringify({ success: true }),
+			{ headers: { "Content-Type": "application/json" } }
+		);
+	}
+
+  	return new Response("Feedback Aggregator API", { status: 200 });
+
 	},
 } satisfies ExportedHandler<Env>;
