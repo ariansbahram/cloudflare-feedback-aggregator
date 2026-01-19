@@ -55,6 +55,50 @@ export default {
 		);
 	}
 
+	if (url.pathname === "/summary" && request.method === "GET") {
+	// Fetch recent feedback from D1
+		const { results } = await env.feedback_db
+			.prepare(
+				"SELECT source, message FROM feedback ORDER BY created_at DESC LIMIT 10"
+			)
+			.all();
+
+	if (!results || results.length === 0) {
+		return new Response(
+			JSON.stringify({ summary: "No feedback available yet." }),
+			{ headers: { "Content-Type": "application/json" } }
+		);
+	}
+
+	const feedbackText = results
+		.map((row: any) => `Source: ${row.source}\nFeedback: ${row.message}`)
+		.join("\n\n");
+
+	// Call Workers AI
+	const aiResponse = await env.AI.run(
+		"@cf/meta/llama-3-8b-instruct",
+		{
+			messages: [
+				{
+					role: "system",
+					content:
+						"You are a product analyst. Summarize user feedback by identifying key themes, overall sentiment, and any urgent issues."
+				},
+				{
+					role: "user",
+					content: feedbackText
+				}
+			]
+		}
+	);
+
+	return new Response(
+		JSON.stringify({ summary: aiResponse.response }),
+		{ headers: { "Content-Type": "application/json" } }
+	);
+}
+
+
 	return new Response("Feedback Aggregator API", { status: 200 });
 
 },
